@@ -1,12 +1,13 @@
-# Cmput 455 sample code
-# UCB algorithm
-# Written by Martin Mueller
+# UCB Algorithm
+#The code is based on CMPUT 455 sample codes
 
-from math import log, sqrt
 import sys
-from gtp_connection import point_to_coord, format_point
+from math import sqrt, log
+from gtp_connection import point_to_coord,format_point
+#from simulation_util import writeMoves
 
 INFINITY = float('inf')
+
 
 def mean(stats, i):
     return stats[i][0] / stats[i][1]
@@ -37,25 +38,50 @@ def bestArm(stats): # Most-pulled arm
     assert best != -1
     return best
 
+def PercentageBased(tuple):
+    return tuple[1]
 
-def byPercentage(tuple):
-    pass
+def PullBased(tuple):
+    return tuple[3]
+def writeMoves(board, moves, stats):
+    """
+    Modified from simulation_util
+    Write simulation results for each move.
+    """
+    gtp_moves = []
+    for i in range(len(moves)):
+       # move_string = "Pass"
+        if moves[i] != None:
+            x, y = point_to_coord(moves[i], board.size)
+            move_string = format_point((x, y))
+        else:
+            move_string="Pass"
+        if stats[i][1]!=0:       
+            gtp_moves.append((move_string, 
+                          stats[i][0]/stats[i][1],stats[i][0],stats[i][1]))
+        else:
+            gtp_moves.append((move_string,0,stats[i][0],stats[i][1]))
+    sys.stderr.write("win rates: {}\n".format(sorted(gtp_moves,
+                     key = PercentageBased, reverse = True)))
+    sys.stderr.flush()
 
-def byPulls(tuple):
-    pass
-
-def writeMoves(board, stats, moves):
-    pass
-
-def runUcb(C, arms, init, simulate, maxSimulations):
-    stats = [[0,0] for _ in range(arms)]
-    for n in range(maxSimulations):
-        move = findBest(stats, C, n)
-        if simulate(move):
+def runUcb(player,board,moves,toplay):
+    stats = [[0,0] for _ in moves]
+    for n in range(len(moves)*10):
+        move = findBest(stats, 0.4, n)
+        result=player.simulation(board,moves[move],toplay)
+        if result==toplay:
             stats[move][0] += 1 # win
         stats[move][1] += 1
-    
-    best_index = bestArm(stats)
+    bestMove=bestArm(stats)
+    best=moves[bestMove]
+    writeMoves(board,moves,stats)
+    return best
+    print("C = {} Statistics: {} Best arm {}".format(C, stats, bestArm(stats)))
 
 
+# for C in [100, 10, sqrt(2), 1, 0.1, 0.01]:
+#     runUcb(C, 10, defaultInit, simulateEasy, 1000)
+    #runUcb(C, 4, defaultInit, simulateHard, 1000)
+    #runUcb(C, 4, defaultInit, simulateHard, 100000)
     

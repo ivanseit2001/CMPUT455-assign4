@@ -12,6 +12,7 @@ from board_base import DEFAULT_SIZE, GO_POINT, GO_COLOR
 from board import GoBoard
 from board_util import GoBoardUtil
 from engine import GoEngine
+from ucb import runUcb
 
 
 class NoGo:
@@ -32,8 +33,51 @@ class NoGo:
         self.weight = self.read_file()
 
     def get_move(self, board: GoBoard, color: GO_COLOR) -> GO_POINT:
-        return GoBoardUtil.generate_random_move(board, color,
-                                                use_eye_filter=False)
+        cboard=board.copy()
+        cboard.current_player=color
+        moves=GoBoardUtil.generate_legal_moves(cboard,color)
+        if not moves:
+            return None
+        # only one legal move to play, there is no other choice
+        elif len(moves) == 1:
+            return moves[0]
+        # run ucb MC to determine the best move at present
+        else:
+            move=self.callUCB(board,moves,color)
+            return move
+       
+       # return GoBoardUtil.generate_random_move(board, color,
+                  #                              use_eye_filter=False)
+    
+    def callUCB(self,board,moves,color):
+        cboard=board.copy()
+        if not moves:
+            return None
+        moves.append(None)
+        move=runUcb(self, cboard,moves,color)
+        return move
+    def simulation(self,board,move,player):
+        cboard=board.copy()
+        cboard.play_move(move,player)
+        opponent=GoBoardUtil.switch(player)
+        return self.playGame(cboard,opponent)
+    def MoveSimulation(self,board,move,player):
+        wins=0
+        for i in range(10):
+            result=self.simulation(board,move,player)
+            if result==player:
+                wins+=1
+        return wins
+    def playGame(self,board,color):
+        while True:
+            color=board.current_player
+            move=GoBoardUtil.generate_random_move
+            board.play_move(move,color)
+            if move is None:
+                break
+        
+        winner=GoBoardUtil.switch(color)
+        return winner
 
     def read_file(self):
         file = open('weights.txt','r')
